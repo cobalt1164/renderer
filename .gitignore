@@ -1,2 +1,5 @@
 *.o
 *.tga
+/.vs/slnx.sqlite-journal
+/.vs/slnx.sqlite
+/.vs
