@@ -1,5 +1,7 @@
+#include "model.h"
 #include "tgaimage.h"
 #include <cmath>
+#include <iostream>
 #include <type_traits>
 const TGAColor white = TGAColor(255, 255, 255, 255);
 const TGAColor red = TGAColor(255, 0, 0, 128);
@@ -47,8 +49,31 @@ void draw_line(int x0, int y0, int x1, int y1, TGAImage &image,
 }
 
 int main(int argc, char **argv) {
-  TGAImage image(100, 100, TGAImage::RGB);
-  draw_line(3, 70, 50, 50, image, green);
+  int width = 700;
+  int height = 700;
+  TGAImage image(width, height, TGAImage::RGB);
+  Model* m;
+  if (argc == 1) {
+    m = new Model("obj/african_head.obj");
+  } else {
+    m = new Model(argv[1]);
+  }
+
+  for (int i = 0; i < m->numFaces(); i++) {
+    std::vector<int> face = m->getFace(i);
+    for (int j = 0; j < 3; j++) {
+      Vec3<float> v0 = m->getVertex(face[j]);
+      Vec3<float> v1 = m->getVertex(face[(j + 1) % 3]);
+
+      // The coordinates go from -1 to 1. Change that to 0 to 2 then scale
+      // accordingly
+      int x0 = (v0.x + 1.) * width / 2.;
+      int y0 = (v0.y + 1.) * height / 2.;
+      int x1 = (v1.x + 1.) * width / 2.;
+      int y1 = (v1.y + 1.) * height / 2.;
+      draw_line(x0, y0, x1, y1, image, white);
+    }
+  }
   image.flip_vertically();
   image.write_tga_file("output.tga");
   return 0;

@@ -3,12 +3,13 @@
 
 class Model {
 private:
-	std::vector<Vec3<float>> vertices;
-	std::vector<std::vector<int>> faces;
+  std::vector<Vec3<float>> vertices;
+  std::vector<std::vector<int>> faces;
+
 public:
-	Model(char* fileName);
-	std::vector<int> getFace(int i);
-	Vec3<float> getVertex(int i);
-	int numFaces();
-	int numVertices();
+  Model(const char *fileName);
+  std::vector<int> getFace(int i);
+  Vec3<float> getVertex(int i);
+  int numFaces();
+  int numVertices();
 };
