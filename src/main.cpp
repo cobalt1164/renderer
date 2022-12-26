@@ -67,10 +67,10 @@ int main(int argc, char **argv) {
 
       // The coordinates go from -1 to 1. Change that to 0 to 2 then scale
       // accordingly
-      int x0 = (v0.x + 1.) * width / 2.;
-      int y0 = (v0.y + 1.) * height / 2.;
-      int x1 = (v1.x + 1.) * width / 2.;
-      int y1 = (v1.y + 1.) * height / 2.;
+      int x0 = (v0.x) * width;
+      int y0 = (v0.y) * height;
+      int x1 = (v1.x) * width;
+      int y1 = (v1.y) * height;
       draw_line(x0, y0, x1, y1, image, white);
     }
   }

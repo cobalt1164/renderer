@@ -12,4 +12,6 @@ public:
   Vec3<float> getVertex(int i);
   int numFaces();
   int numVertices();
+  float minVal;
+  float maxVal;
 };
