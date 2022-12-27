@@ -38,12 +38,11 @@ void draw_line(int x0, int y0, int x1, int y1, TGAImage &image,
     // Make a scale from 0 to 1 and apply to dx and dy
     // This tells us how far in each direction to plot the next point
     float scale = ((float)(i - x0) / (x1 - x0));
-    int new_x = x0 + dx * scale;
     int new_y = y0 + dy * scale;
     if (transpose) {
-      image.set(new_y, new_x, color); // de-swap
+      image.set(new_y, i, color); // de-swap
     } else {
-      image.set(new_x, new_y, color);
+      image.set(i, new_y, color);
     }
   }
 }
