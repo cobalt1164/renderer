@@ -67,26 +67,51 @@ void draw_triangle(Vec2<int> v0, Vec2<int> v1, Vec2<int> v2, TGAImage &image,
 
   // from v0 to v1, draw on v0-v1 line from v2-v0 line
   // (if v0 is on the left, otherwise go other direction)
-  // for (int i = 0; i < (v1.y - v0.y); i++) {
-  //   Vec2<int> left_bound = Vec2<int>();
-  //   Vec2<int> right_bound = Vec2<int>();
-  //   int left_dx = v2.x - v0.x;
-  //   int left_dy = v2.y - v0.y;
-  //   float scale = ((float)(i - v0.x) / (v2.x - v0.x));
-  //   int new_x = v0.x + left_dx * scale;
-  //   int new_y = v0.y + left_dy * scale;
-  //   left_bound.x = new_x;
-  //   left_bound.y = new_y;
-  //   right_bound = left_bound;
-  //   right_bound.x += 100;
-  //   std::cout << left_bound.x << " " << left_bound.y << std::endl;
-  //   draw_line(left_bound, right_bound, image, color);
-  // }
+  for (int y = v0.y; y <= v1.y; y++) {
+    Vec2<int> left_bound = Vec2<int>();
+    Vec2<int> right_bound = Vec2<int>();
+    int left_dx = v2.x - v0.x;
+    int left_dy = v2.y - v0.y;
+    int right_dx = v0.x - v1.x;
+    int right_dy = v0.y - v1.y;
+    float scale = ((float)(y - v0.y) / (left_dy));
+    int new_x = v0.x + left_dx * scale;
+    float scale2 = ((float)(y - v0.y) / (right_dy));
+    int new_x2 = v0.x + right_dx * scale2;
+    left_bound.x = new_x;
+    left_bound.y = y;
+    right_bound.x = new_x2;
+    right_bound.y = y;
+    if (std::abs(new_x - new_x2) > 0) { // fix random dot being drawn when distance = 0
+      draw_line(left_bound, right_bound, image, color);
+    }
+  }
+
+  // draw on v1-v2 line from v2-v0 line
+  for (int y = v1.y; y <= v2.y; y++) {
+    Vec2<int> left_bound = Vec2<int>();
+    Vec2<int> right_bound = Vec2<int>();
+    int left_dx = v2.x - v0.x;
+    int left_dy = v2.y - v0.y;
+    int right_dx = v1.x - v2.x;
+    int right_dy = v1.y - v2.y;
+    float scale = ((float)(y - v0.y) / (left_dy));
+    int new_x = v0.x + left_dx * scale;
+    float scale2 = ((float)(y - v1.y) / (right_dy));
+    int new_x2 = v1.x + right_dx * scale2;
+    left_bound.x = new_x;
+    left_bound.y = y;
+    right_bound.x = new_x2;
+    right_bound.y = y;
+    if (std::abs(new_x - new_x2) > 0) { // fix random dot being drawn when distance = 0
+      draw_line(left_bound, right_bound, image, color);
+    }
+  }
 }
 
 int main(int argc, char **argv) {
-  int width = 500;
-  int height = 500;
+  int width = 10000;
+  int height = 10000;
   TGAImage image(width, height, TGAImage::RGB);
   Model *m;
   if (argc == 1) {
@@ -94,28 +119,18 @@ int main(int argc, char **argv) {
   } else {
     m = new Model(argv[1]);
   }
-  Vec2<int> t0[3] = {Vec2<int>(10, 70), Vec2<int>(50, 160), Vec2<int>(70, 80)};
-  Vec2<int> t1[3] = {Vec2<int>(180, 50), Vec2<int>(150, 1), Vec2<int>(70, 180)};
-  Vec2<int> t2[3] = {Vec2<int>(180, 150), Vec2<int>(120, 160),
-                     Vec2<int>(130, 180)};
-  draw_triangle(t0[0], t0[1], t0[2], image, red);
-  draw_triangle(t1[0], t1[1], t1[2], image, white);
-  draw_triangle(t2[0], t2[1], t2[2], image, green);
-  // for (int i = 0; i < m->numFaces(); i++) {
-  //   std::vector<int> face = m->getFace(i);
-  //   for (int j = 0; j < 3; j++) {
-  //     Vec3<float> v0 = m->getVertex(face[j]);
-  //     Vec3<float> v1 = m->getVertex(face[(j + 1) % 3]);
-  //
-  //     // The coordinates go from -1 to 1. Change that to 0 to 2 then scale
-  //     // accordingly
-  //     int x0 = (v0.x) * width;
-  //     int y0 = (v0.y) * height;
-  //     int x1 = (v1.x) * width;
-  //     int y1 = (v1.y) * height;
-  //     draw_line(x0, y0, x1, y1, image, white);
-  //   }
-  // }
+  for (int i = 0; i < m->numFaces(); i++) {
+    std::vector<int> face = m->getFace(i);
+    std::vector<Vec2<int>> faceVertices;
+    for (int j = 0; j < 3; j++) {
+      Vec3<float> v0 = m->getVertex(face[j]);
+      int x = (v0.x) * width;
+      int y = (v0.y) * height;
+      faceVertices.push_back(Vec2<int>(x, y));
+    }
+    TGAColor random = TGAColor(rand()%255, rand()%255, rand()%255, 255);
+    draw_triangle(faceVertices[0], faceVertices[1], faceVertices[2], image, random);
+  }
   image.flip_vertically();
   image.write_tga_file("output.tga");
   return 0;
