@@ -61,57 +61,33 @@ void draw_triangle(Vec2<int> v0, Vec2<int> v1, Vec2<int> v2, TGAImage &image,
 
   // v0-v1, v1-v2, v2-v0
   // draw outline
-  draw_line(v0, v1, image, color);
-  draw_line(v1, v2, image, color);
-  draw_line(v2, v0, image, color);
+  // draw_line(v0, v1, image, color);
+  // draw_line(v1, v2, image, color);
+  // draw_line(v2, v0, image, color);
 
   // from v0 to v1, draw on v0-v1 line from v2-v0 line
-  // (if v0 is on the left, otherwise go other direction)
-  for (int y = v0.y; y <= v1.y; y++) {
+  // from v1 to v2, draw on v1-v2 line from v2-v0 line
+  for (int y = v0.y; y <= v2.y; y++) {
     Vec2<int> left_bound = Vec2<int>();
     Vec2<int> right_bound = Vec2<int>();
-    int left_dx = v2.x - v0.x;
-    int left_dy = v2.y - v0.y;
-    int right_dx = v0.x - v1.x;
-    int right_dy = v0.y - v1.y;
-    float scale = ((float)(y - v0.y) / (left_dy));
-    int new_x = v0.x + left_dx * scale;
-    float scale2 = ((float)(y - v0.y) / (right_dy));
-    int new_x2 = v0.x + right_dx * scale2;
-    left_bound.x = new_x;
-    left_bound.y = y;
-    right_bound.x = new_x2;
-    right_bound.y = y;
-    if (std::abs(new_x - new_x2) > 0) { // fix random dot being drawn when distance = 0
-      draw_line(left_bound, right_bound, image, color);
-    }
-  }
+    Vec2<int> d_left = (v2 - v0);
+    Vec2<int> d_right = y > v1.y ? (v1 - v2) : (v0 - v1);
+    float scale_left = ((float)(y - v0.y) / (d_left.y == 0 ? 1 : d_left.y));
+    float scale_right = ((float)(y - (y > v1.y ? v1.y : v0.y)) / (d_right.y == 0 ? 1 : d_right.y));
+    int x_left = v0.x + d_left.x * scale_left;
+    int x_right = (y > v1.y ? v1.x : v0.x) + d_right.x * scale_right;
 
-  // draw on v1-v2 line from v2-v0 line
-  for (int y = v1.y; y <= v2.y; y++) {
-    Vec2<int> left_bound = Vec2<int>();
-    Vec2<int> right_bound = Vec2<int>();
-    int left_dx = v2.x - v0.x;
-    int left_dy = v2.y - v0.y;
-    int right_dx = v1.x - v2.x;
-    int right_dy = v1.y - v2.y;
-    float scale = ((float)(y - v0.y) / (left_dy));
-    int new_x = v0.x + left_dx * scale;
-    float scale2 = ((float)(y - v1.y) / (right_dy));
-    int new_x2 = v1.x + right_dx * scale2;
-    left_bound.x = new_x;
-    left_bound.y = y;
-    right_bound.x = new_x2;
-    right_bound.y = y;
-    if (std::abs(new_x - new_x2) > 0) { // fix random dot being drawn when distance = 0
+    if (std::abs(x_left - x_right) > 0) { // fix random dot being drawn when distance = 0
+      Vec2<int> left_bound = Vec2<int>(x_left, y);
+      Vec2<int> right_bound = Vec2<int>(x_right, y);
       draw_line(left_bound, right_bound, image, color);
     }
   }
 }
 
 int main(int argc, char **argv) {
-  int width = 10000;
-  int height = 10000;
+  int width = 1000;
+  int height = 1000;
   TGAImage image(width, height, TGAImage::RGB);
   Model *m;
   if (argc == 1) {

@@ -22,4 +22,8 @@ template <class T> struct Vec2 {
     x = _x;
     y = _y;
   };
+
+  inline Vec2<T> operator+(Vec2<T> o) { return Vec2<T>(x + o.x, y + o.y); };
+  inline Vec2<T> operator-(Vec2<T> o) { return Vec2<T>(x - o.x, y - o.y); };
+  inline Vec2<T> operator*(float o) { return Vec2<T>(x * o, y * o); };
 };
