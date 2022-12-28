@@ -68,8 +68,6 @@ void draw_triangle(Vec2<int> v0, Vec2<int> v1, Vec2<int> v2, TGAImage &image,
   // from v0 to v1, draw on v0-v1 line from v2-v0 line
   // from v1 to v2, draw on v1-v2 line from v2-v0 line
   for (int y = v0.y; y <= v2.y; y++) {
-    Vec2<int> left_bound = Vec2<int>();
-    Vec2<int> right_bound = Vec2<int>();
     Vec2<int> d_left = (v2 - v0);
     Vec2<int> d_right = y > v1.y ? (v1 - v2) : (v0 - v1);
     float scale_left = ((float)(y - v0.y) / (d_left.y == 0 ? 1 : d_left.y));
@@ -95,17 +93,34 @@ int main(int argc, char **argv) {
   } else {
     m = new Model(argv[1]);
   }
+
+  // Shine a light from in front in world coordinates
+  Vec3<float> light = Vec3<float>(0.0, 0.0, -1.0);
+
   for (int i = 0; i < m->numFaces(); i++) {
     std::vector<int> face = m->getFace(i);
-    std::vector<Vec2<int>> faceVertices;
+    Vec2<int> screenVertices[3];
+    Vec3<float> worldVertices[3];
     for (int j = 0; j < 3; j++) {
       Vec3<float> v0 = m->getVertex(face[j]);
       int x = (v0.x) * width;
       int y = (v0.y) * height;
-      faceVertices.push_back(Vec2<int>(x, y));
+      worldVertices[j] = v0;
+      screenVertices[j] = (Vec2<int>(x, y));
     }
-    TGAColor random = TGAColor(rand()%255, rand()%255, rand()%255, 255);
-    draw_triangle(faceVertices[0], faceVertices[1], faceVertices[2], image, random);
+    // Find the normal of the face, and find dot product between
+    // the normal and the light direction. This will give us
+    // light intensity. This is due to the fact that light intensity
+    // approaches 0 as the light becomes orthogonal to a surface, same
+    // as dot product.
+    Vec3<float> side1 = (worldVertices[2] - worldVertices[0]);
+    Vec3<float> side2 = (worldVertices[1] - worldVertices[0]);
+    Vec3<float> faceNormal = side1 ^ side2;
+    faceNormal = faceNormal.normalize();
+    float n = faceNormal * light;
+    if (n > 0) { // n < 0 on objects behind, so dont render
+      draw_triangle(screenVertices[0], screenVertices[1], screenVertices[2], image, TGAColor(255*n, 255*n, 255*n, 255));
+    }
   }
   image.flip_vertically();
   image.write_tga_file("output.tga");

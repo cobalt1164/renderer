@@ -1,3 +1,6 @@
+#include <cmath>
+#include <iostream>
+
 template <class T> struct Vec3 {
   T x, y, z;
   Vec3() {
@@ -9,6 +12,26 @@ template <class T> struct Vec3 {
     x = _x;
     y = _y;
     z = _z;
+  };
+  inline Vec3<T> operator+(Vec3<T> b) {
+      return Vec3<T> (x + b.x, y + b.y, z + b.z);
+  }
+  inline Vec3<T> operator-(Vec3<T> b) {
+    return Vec3<T> (x - b.x, y - b.y, z - b.z);
+  }
+  inline T operator*(Vec3<T> b) {
+    return x * b.x + y * b.y + z * b.z;
+  };
+  inline Vec3<T> operator*(T b) {
+    return Vec3<T>(x * b, y * b, z * b);
+  }
+  inline Vec3<T> operator^(Vec3<T> b) {
+    return Vec3<T>(y * b.z - z * b.y,
+        z * b.x - x * b.z, x * b.y - y * b.x);
+  }; // cross product
+  float length() { return std::sqrt(x*x+y*y+z*z); }
+  Vec3<T> normalize() {
+    return *this * (1/length());
   };
 };
 

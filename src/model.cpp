@@ -48,6 +48,7 @@ int Model::numVertices() { return vertices.size(); }
 
 Vec3<float> Model::getVertex(int i) {
   // Normalize for non-scaled obj files
+  // AKA convert to normalized world coordinates
   Vec3<float> vertex = vertices[i];
   float newX = (vertex.x - minVal) / (maxVal - minVal);
   float newY = (vertex.y - minVal) / (maxVal - minVal);
