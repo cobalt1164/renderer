@@ -26,6 +26,9 @@ template <class T> struct Vec3 {
   inline Vec3<T> operator*(T b) {
     return Vec3<T>(x * b, y * b, z * b);
   }
+  inline Vec3<T> operator[](int i) {
+    return (i == 0 ? x : (i == 1 ? y : z));
+  }
   inline Vec3<T> operator^(Vec3<T> b) {
     return Vec3<T>(y * b.z - z * b.y,
         z * b.x - x * b.z, x * b.y - y * b.x);

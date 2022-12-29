@@ -55,10 +55,10 @@ void draw_line(Vec2<int> v0, Vec2<int> v1, TGAImage &image, TGAColor color) {
   draw_line(v0.x, v0.y, v1.x, v1.y, image, color);
 }
 
-Vec3<float> barycentric(Vec3<float> A, Vec3<float> B, Vec3<float> C, Vec3<float> P) {
-  // Vec3<float> A(a.x, a.y, 0);
-  // Vec3<float> B(b.x, b.y, 0);
-  // Vec3<float> C(c.x, c.y, 0);
+Vec3<float> barycentric(Vec3<float> a, Vec3<float> b, Vec3<float> c, Vec3<float> P) {
+  Vec3<float> A(a.x, a.y, 0);
+  Vec3<float> B(b.x, b.y, 0);
+  Vec3<float> C(c.x, c.y, 0);
   // Vec3<float> P(p.x, p.y, 0);
 
   // Use Cramer's rule to solve 
@@ -79,6 +79,7 @@ Vec3<float> barycentric(Vec3<float> A, Vec3<float> B, Vec3<float> C, Vec3<float>
   float u = 1.0 - v - w;
   return Vec3<float>(v,w,u);
 }
+
 
 void draw_triangle(Vec3<float> v0, Vec3<float> v1, Vec3<float> v2, TGAImage &image, TGAColor color, float *zbuffer) {
   // Find bounding box of the triangle
@@ -101,13 +102,15 @@ void draw_triangle(Vec3<float> v0, Vec3<float> v1, Vec3<float> v2, TGAImage &ima
   for (int i = leftOfBox; i <= rightOfBox; i++) {
     for (int j = bottomOfBox; j <= topOfBox; j++) {
       Vec3<float> bary_coords = barycentric(v0, v1, v2, Vec3<float>(i, j, 0));
-      if (bary_coords.x >= 0 && bary_coords.y >= 0 && bary_coords.z >= 0) {
+      if (bary_coords.x >= -0.001 && bary_coords.y >= -0.001 && bary_coords.z >= -0.001) {
+        // Since the triangle is a polygon we need to find the z value of its entirety
+        // We can do this by using barycentric coordinates
         float z = v0.z * bary_coords.x + v1.z * bary_coords.y + v2.z * bary_coords.z;
-        if (z >= IDX_2D(zbuffer, j, i, image.get_width())) { 
+        if (z > IDX_2D(zbuffer, j, i, image.get_width())) { 
           IDX_2D(zbuffer, j, i, image.get_width()) = z;
           image.set(i, j, color);
         }
-      }
+      } 
     }
   }
 }
@@ -151,18 +154,19 @@ int main(int argc, char **argv) {
     m = new Model(argv[1]);
   }
 
-  // Vec2<int> t0[3] = {Vec2<int>(10, 70),   Vec2<int>(60, 70),  Vec2<int>(60, 140)}; 
-  // Vec2<int> t1[3] = {Vec2<int>(60, 70),  Vec2<int>(110, 70),   Vec2<int>(60, 140)}; 
-  // draw_triangle(t1[0], t1[1], t1[2], image, white);
-  // draw_triangle(t0[0], t0[1], t0[2], image, green);
-
-  // Shine a light from in front in world coordinates
-  Vec3<float> light = Vec3<float>(0.0, 0.0, -1.0);
-
   float zbuffer[width * height];
   for (int i = 0; i < width*height; i++) {
     zbuffer[i] = -std::numeric_limits<float>::infinity();
   }
+  //
+  // Vec3<float> t0[3] = {Vec3<float>(10, 70, 0),   Vec3<float>(60, 70, 0),  Vec3<float>(60, 140, 0)}; 
+  // Vec3<float> t1[3] = {Vec3<float>(60, 70, 0),  Vec3<float>(110, 70, 0),   Vec3<float>(60, 140, 0)}; 
+  // draw_triangle(t0[0], t0[1], t0[2], image, green, zbuffer);
+  // draw_triangle(t1[0], t1[1], t1[2], image, white, zbuffer);
+
+  // Shine a light from in front in world coordinates
+  Vec3<float> light = Vec3<float>(0.0, 0.0, -1.0);
+
 
   for (int i = 0; i < m->numFaces(); i++) {
     std::vector<int> face = m->getFace(i);
@@ -180,7 +184,7 @@ int main(int argc, char **argv) {
     // light intensity. This is due to the fact that light intensity
     // approaches 0 as the light becomes orthogonal to a surface, same
     // as dot product.
-    Vec3<float> side1 = (worldVertices[2] - worldVertices[0]);
+    Vec3<float> side1 = (worldVertices[2] - worldVertices[1]);
     Vec3<float> side2 = (worldVertices[1] - worldVertices[0]);
     Vec3<float> faceNormal = side1 ^ side2;
     faceNormal = faceNormal.normalize();
