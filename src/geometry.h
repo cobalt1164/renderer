@@ -1,6 +1,7 @@
 #include <cmath>
 #include <iostream>
 
+
 template <class T> struct Vec3 {
   T x, y, z;
   Vec3() {

@@ -3,9 +3,13 @@
 #include <cmath>
 #include <iostream>
 #include <type_traits>
+
+#define IDX_2D(arr, r, c, width) arr[(r*width)+c]
+
 const TGAColor white = TGAColor(255, 255, 255, 255);
 const TGAColor red = TGAColor(255, 0, 0, 128);
 const TGAColor green = TGAColor(0, 255, 0, 128);
+
 
 void draw_line(int x0, int y0, int x1, int y1, TGAImage &image,
                TGAColor color) {
@@ -51,11 +55,11 @@ void draw_line(Vec2<int> v0, Vec2<int> v1, TGAImage &image, TGAColor color) {
   draw_line(v0.x, v0.y, v1.x, v1.y, image, color);
 }
 
-bool barycentric(Vec2<int> a, Vec2<int> b, Vec2<int> c, Vec2<int> p) {
-  Vec3<float> A(a.x, a.y, 0);
-  Vec3<float> B(b.x, b.y, 0);
-  Vec3<float> C(c.x, c.y, 0);
-  Vec3<float> P(p.x, p.y, 0);
+Vec3<float> barycentric(Vec3<float> A, Vec3<float> B, Vec3<float> C, Vec3<float> P) {
+  // Vec3<float> A(a.x, a.y, 0);
+  // Vec3<float> B(b.x, b.y, 0);
+  // Vec3<float> C(c.x, c.y, 0);
+  // Vec3<float> P(p.x, p.y, 0);
 
   // Use Cramer's rule to solve 
   // vA + wB = C
@@ -73,10 +77,10 @@ bool barycentric(Vec2<int> a, Vec2<int> b, Vec2<int> c, Vec2<int> p) {
   float v = (d11 * d20 - d01 * d21) / denom;
   float w = (d00 * d21 - d01 * d20) / denom;
   float u = 1.0 - v - w;
-  return v >= 0.0 && w >= 0.0 && u >= 0.0;
+  return Vec3<float>(v,w,u);
 }
 
-void draw_triangle(Vec2<int> v0, Vec2<int> v1, Vec2<int> v2, TGAImage &image, TGAColor color) {
+void draw_triangle(Vec3<float> v0, Vec3<float> v1, Vec3<float> v2, TGAImage &image, TGAColor color, float *zbuffer) {
   // Find bounding box of the triangle
   // Then iterate through every pixel in the bounding box and draw pixels that are in the triangle
   // We know if the pixel is in the triangle because it will have all non-negative barycentric coordinates.
@@ -96,8 +100,14 @@ void draw_triangle(Vec2<int> v0, Vec2<int> v1, Vec2<int> v2, TGAImage &image, TG
 
   for (int i = leftOfBox; i <= rightOfBox; i++) {
     for (int j = bottomOfBox; j <= topOfBox; j++) {
-      if (barycentric(v0, v1, v2, Vec2<int>(i, j)))
-        image.set(i, j, color);
+      Vec3<float> bary_coords = barycentric(v0, v1, v2, Vec3<float>(i, j, 0));
+      if (bary_coords.x >= 0 && bary_coords.y >= 0 && bary_coords.z >= 0) {
+        float z = v0.z * bary_coords.x + v1.z * bary_coords.y + v2.z * bary_coords.z;
+        if (z >= IDX_2D(zbuffer, j, i, image.get_width())) { 
+          IDX_2D(zbuffer, j, i, image.get_width()) = z;
+          image.set(i, j, color);
+        }
+      }
     }
   }
 }
@@ -149,16 +159,21 @@ int main(int argc, char **argv) {
   // Shine a light from in front in world coordinates
   Vec3<float> light = Vec3<float>(0.0, 0.0, -1.0);
 
+  float zbuffer[width * height];
+  for (int i = 0; i < width*height; i++) {
+    zbuffer[i] = -std::numeric_limits<float>::infinity();
+  }
+
   for (int i = 0; i < m->numFaces(); i++) {
     std::vector<int> face = m->getFace(i);
-    Vec2<int> screenVertices[3];
+    Vec3<float> screenVertices[3];
     Vec3<float> worldVertices[3];
     for (int j = 0; j < 3; j++) {
       Vec3<float> v0 = m->getVertex(face[j]);
       int x = (v0.x) * width;
       int y = (v0.y) * height;
       worldVertices[j] = v0;
-      screenVertices[j] = (Vec2<int>(x, y));
+      screenVertices[j] = (Vec3<float>(x, y, v0.z));
     }
     // Find the normal of the face, and find dot product between
     // the normal and the light direction. This will give us
@@ -171,7 +186,7 @@ int main(int argc, char **argv) {
     faceNormal = faceNormal.normalize();
     float n = faceNormal * light;
     if (n > 0) { // n < 0 on objects behind, so dont render
-      draw_triangle(screenVertices[0], screenVertices[1], screenVertices[2], image, TGAColor(255*n, 255*n, 255*n, 255));
+      draw_triangle(screenVertices[0], screenVertices[1], screenVertices[2], image, TGAColor(255*n, 255*n, 255*n, 255), zbuffer);
     }
   }
   image.flip_vertically();
