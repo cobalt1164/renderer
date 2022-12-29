@@ -51,37 +51,84 @@ void draw_line(Vec2<int> v0, Vec2<int> v1, TGAImage &image, TGAColor color) {
   draw_line(v0.x, v0.y, v1.x, v1.y, image, color);
 }
 
-void draw_triangle(Vec2<int> v0, Vec2<int> v1, Vec2<int> v2, TGAImage &image,
-                   TGAColor color) {
-  // Sort vertices by y-axis
-  // Then rasterize based on upper/lower part
+bool barycentric(Vec2<int> a, Vec2<int> b, Vec2<int> c, Vec2<int> p) {
+  Vec3<float> A(a.x, a.y, 0);
+  Vec3<float> B(b.x, b.y, 0);
+  Vec3<float> C(c.x, c.y, 0);
+  Vec3<float> P(p.x, p.y, 0);
+
+  // Use Cramer's rule to solve 
+  // vA + wB = C
+  // This method is from the book "Realtime collision Detection"
+  Vec3<float> v0 = B - A;
+  Vec3<float> v1 = C - A;
+  Vec3<float> v2 = P - A;
+
+  float d00 = v0 * v0;
+  float d01 = v0 * v1;
+  float d11 = v1 * v1;
+  float d20 = v2 * v0;
+  float d21 = v2 * v1;
+  float denom = d00 * d11 - d01 * d01;
+  float v = (d11 * d20 - d01 * d21) / denom;
+  float w = (d00 * d21 - d01 * d20) / denom;
+  float u = 1.0 - v - w;
+  return v >= 0.0 && w >= 0.0 && u >= 0.0;
+}
+
+void draw_triangle(Vec2<int> v0, Vec2<int> v1, Vec2<int> v2, TGAImage &image, TGAColor color) {
+  // Find bounding box of the triangle
+  // Then iterate through every pixel in the bounding box and draw pixels that are in the triangle
+  // We know if the pixel is in the triangle because it will have all non-negative barycentric coordinates.
+
+  // find toppest, bottomest, and rightest, and leftest
   if (v0.y > v1.y) std::swap(v0, v1);
   if (v1.y > v2.y) std::swap(v1, v2);
   if (v0.y > v1.y) std::swap(v0, v1);
+  int topOfBox = v2.y;
+  int bottomOfBox = v0.y;
 
-  // v0-v1, v1-v2, v2-v0
-  // draw outline
-  // draw_line(v0, v1, image, color);
-  // draw_line(v1, v2, image, color);
-  // draw_line(v2, v0, image, color);
+  if (v0.x > v1.x) std::swap(v0, v1);
+  if (v1.x > v2.x) std::swap(v1, v2);
+  if (v0.x > v1.x) std::swap(v0, v1);
+  int leftOfBox = v0.x;
+  int rightOfBox = v2.x;
 
-  // from v0 to v1, draw on v0-v1 line from v2-v0 line
-  // from v1 to v2, draw on v1-v2 line from v2-v0 line
-  for (int y = v0.y; y <= v2.y; y++) {
-    Vec2<int> d_left = (v2 - v0);
-    Vec2<int> d_right = y > v1.y ? (v1 - v2) : (v0 - v1);
-    float scale_left = ((float)(y - v0.y) / (d_left.y == 0 ? 1 : d_left.y));
-    float scale_right = ((float)(y - (y > v1.y ? v1.y : v0.y)) / (d_right.y == 0 ? 1 : d_right.y));
-    int x_left = v0.x + d_left.x * scale_left;
-    int x_right = (y > v1.y ? v1.x : v0.x) + d_right.x * scale_right;
-
-    if (std::abs(x_left - x_right) > 0) { // fix random dot being drawn when distance = 0
-      Vec2<int> left_bound = Vec2<int>(x_left, y);
-      Vec2<int> right_bound = Vec2<int>(x_right, y);
-      draw_line(left_bound, right_bound, image, color);
+  for (int i = leftOfBox; i <= rightOfBox; i++) {
+    for (int j = bottomOfBox; j <= topOfBox; j++) {
+      if (barycentric(v0, v1, v2, Vec2<int>(i, j)))
+        image.set(i, j, color);
     }
   }
 }
+
+// Old linesweep method
+// void draw_triangle(Vec2<int> v0, Vec2<int> v1, Vec2<int> v2, TGAImage &image,
+//                    TGAColor color) {
+//   // Sort vertices by y-axis
+//   // Then rasterize based on upper/lower part
+//   if (v0.y > v1.y) std::swap(v0, v1);
+//   if (v1.y > v2.y) std::swap(v1, v2);
+//   if (v0.y > v1.y) std::swap(v0, v1);
+//
+//
+//   // from v0 to v1, draw on v0-v1 line from v2-v0 line
+//   // from v1 to v2, draw on v1-v2 line from v2-v0 line
+//   for (int y = v0.y; y <= v2.y; y++) {
+//     Vec2<int> d_left = (v2 - v0);
+//     Vec2<int> d_right = y > v1.y ? (v1 - v2) : (v0 - v1);
+//     float scale_left = ((float)(y - v0.y) / (d_left.y == 0 ? 1 : d_left.y));
+//     float scale_right = ((float)(y - (y > v1.y ? v1.y : v0.y)) / (d_right.y == 0 ? 1 : d_right.y));
+//     int x_left = v0.x + d_left.x * scale_left;
+//     int x_right = (y > v1.y ? v1.x : v0.x) + d_right.x * scale_right;
+//
+//     if (std::abs(x_left - x_right) > 0) { // fix random dot being drawn when distance = 0
+//       Vec2<int> left_bound = Vec2<int>(x_left, y);
+//       Vec2<int> right_bound = Vec2<int>(x_right, y);
+//       draw_line(left_bound, right_bound, image, color);
+//     }
+//   }
+// }
 
 int main(int argc, char **argv) {
   int width = 1000;
@@ -93,6 +140,11 @@ int main(int argc, char **argv) {
   } else {
     m = new Model(argv[1]);
   }
+
+  // Vec2<int> t0[3] = {Vec2<int>(10, 70),   Vec2<int>(60, 70),  Vec2<int>(60, 140)}; 
+  // Vec2<int> t1[3] = {Vec2<int>(60, 70),  Vec2<int>(110, 70),   Vec2<int>(60, 140)}; 
+  // draw_triangle(t1[0], t1[1], t1[2], image, white);
+  // draw_triangle(t0[0], t0[1], t0[2], image, green);
 
   // Shine a light from in front in world coordinates
   Vec3<float> light = Vec3<float>(0.0, 0.0, -1.0);
