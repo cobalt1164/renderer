@@ -28,13 +28,18 @@ Model::Model(const char *fileName) {
       vertices.push_back(Vec3<float>(x, y, z));
     } else if (v_f.compare("f") == 0) {
       std::string trash;
+      char separator;
       std::vector<int> face;
+      std::vector<int> face_texture;
       for (int i = 0; i < 3; i++) {
         int idx;
-        file >> idx >> trash;
+        int texture_idx;
+        file >> idx >> separator >> texture_idx >> trash;
         face.push_back(idx - 1);
+        face_texture.push_back(texture_idx - 1);
       }
       faces.push_back(face);
+      face_textures.push_back(face_texture);
     } else if (v_f.compare("vt") == 0) {
       float u, v, w;
       file >> u >> v >> w;
@@ -73,3 +78,5 @@ Vec3<float> Model::getVertex(int i) {
 }
 
 std::vector<int> Model::getFace(int i) { return faces[i]; }
+
+std::vector<int> Model::getFaceTexture(int i) {return face_textures[i]; }
