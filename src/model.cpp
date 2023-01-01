@@ -1,4 +1,5 @@
 #include "model.h"
+#include "tgaimage.h"
 #include <algorithm>
 #include <fstream>
 #include <iostream>
@@ -34,11 +35,26 @@ Model::Model(const char *fileName) {
         face.push_back(idx - 1);
       }
       faces.push_back(face);
+    } else if (v_f.compare("vt") == 0) {
+      float u, v, w;
+      file >> u >> v >> w;
+      texture_coords.push_back(Vec3<float>(u, v, w));
     } else {
       continue;
     }
   } while (std::getline(file, discard));
+  loadTexture(fileName, "_diffuse.tga", &diffuse_map);
   std::cout << "vertices: " << vertices.size() << " | faces: " << faces.size()
+            << std::endl;
+}
+
+void Model::loadTexture(const char *fileName, const char *suffix,
+                        TGAImage *ptr) {
+  std::string file(fileName);
+  size_t dot_index = file.find_last_of(".");
+  file = file.substr(0, dot_index) + std::string(suffix);
+  std::cout << file << " texture: "
+            << (ptr->read_tga_file(file.c_str()) ? "succeeded" : "failed")
             << std::endl;
 }
 
