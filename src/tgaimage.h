@@ -44,6 +44,13 @@ struct TGAColor {
 	TGAColor(const TGAColor &c) : val(c.val), bytespp(c.bytespp) {
 	}
 
+	TGAColor operator *(float c) {
+		this->r *= c;
+		this->g *= c;
+		this->b *= c;
+		return *this;
+	}
+
 	TGAColor(const unsigned char *p, int bpp) : val(0), bytespp(bpp) {
 		for (int i=0; i<bpp; i++) {
 			raw[i] = p[i];

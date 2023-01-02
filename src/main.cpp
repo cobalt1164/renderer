@@ -80,38 +80,49 @@ Vec3<float> barycentric(Vec3<float> a, Vec3<float> b, Vec3<float> c,
   return Vec3<float>(v, w, u);
 }
 
-void draw_triangle(Vec3<float> v0, Vec3<float> v1, Vec3<float> v2,
-                   TGAImage &image, float intensity, float *zbuffer) {
+void draw_triangle(Vec3<float> v0, Vec3<float> v1, Vec3<float> v2, Vec3<float>v0t, Vec3<float> v1t, Vec3<float> v2t,
+                   TGAImage &image, TGAImage *map, float intensity, float *zbuffer) {
   // Find bounding box of the triangle
   // Then iterate through every pixel in the bounding box and draw pixels that
   // are in the triangle We know if the pixel is in the triangle because it will
   // have all non-negative barycentric coordinates.
 
   // find toppest, bottomest, and rightest, and leftest
-  if (v0.y > v1.y)
+  Vec3<float> orig_v0 = v0;
+  Vec3<float> orig_v1 = v1;
+  Vec3<float> orig_v2 = v2;
+  if (v0.y > v1.y) {
     std::swap(v0, v1);
-  if (v1.y > v2.y)
+  }
+  if (v1.y > v2.y) {
     std::swap(v1, v2);
-  if (v0.y > v1.y)
+  }
+  if (v0.y > v1.y) {
     std::swap(v0, v1);
+  }
   int topOfBox = v2.y;
   int bottomOfBox = v0.y;
 
-  if (v0.x > v1.x)
+  if (v0.x > v1.x) {
     std::swap(v0, v1);
-  if (v1.x > v2.x)
+  }
+  if (v1.x > v2.x) {
     std::swap(v1, v2);
-  if (v0.x > v1.x)
+  }
+  if (v0.x > v1.x) {
     std::swap(v0, v1);
+  }
   int leftOfBox = v0.x;
   int rightOfBox = v2.x;
-  TGAColor color(255 * intensity, 255 * intensity, 255 * intensity, 255);
+  // TGAColor color(255 * intensity, 255 * intensity, 255 * intensity, 255);
 
-
+  v0 = orig_v0;
+  v1 = orig_v1;
+  v2 = orig_v2;
 
   for (int i = leftOfBox; i <= rightOfBox; i++) {
     for (int j = bottomOfBox; j <= topOfBox; j++) {
-      Vec3<float> bary_coords = barycentric(v0, v1, v2, Vec3<float>(i, j, 0));
+      Vec3<float> bary_coords = barycentric(v2, v0, v1, Vec3<float>(i, j, 0)); // Swap ordering (This caused a crazy error and I dont know why)
       if (bary_coords.x >= -0.001 && bary_coords.y >= -0.001 &&
           bary_coords.z >= -0.001) {
         // Since the triangle is a polygon we need to find the z value of its
@@ -119,9 +130,15 @@ void draw_triangle(Vec3<float> v0, Vec3<float> v1, Vec3<float> v2,
         // to interpolate
         float z =
             v0.z * bary_coords.x + v1.z * bary_coords.y + v2.z * bary_coords.z;
+
+        // We have the barycentric coordinates. Now we use them to find the interpolation
+        // of the texture space coordinates. This texture interpolation will be used for the pixel color
+        float u = v0t.x * bary_coords.x + v1t.x * bary_coords.y + v2t.x * bary_coords.z;
+        float v = v0t.y * bary_coords.x + v1t.y * bary_coords.y + v2t.y * bary_coords.z;
+        TGAColor interpolated_color = map->get((int)(u * map->get_width()), (int)(v * map->get_height())) * intensity;
         if (z > IDX_2D(zbuffer, j, i, image.get_width())) {
           IDX_2D(zbuffer, j, i, image.get_width()) = z;
-          image.set(i, j, color);
+          image.set(i, j, interpolated_color);
         }
       }
     }
@@ -184,14 +201,20 @@ int main(int argc, char **argv) {
 
   for (int i = 0; i < m->numFaces(); i++) {
     std::vector<int> face = m->getFace(i);
+    std::vector<int> textureFace = m->getFaceTexture(i);
     Vec3<float> screenVertices[3];
     Vec3<float> worldVertices[3];
+    Vec3<float> textureVertices[3];
+    // std::cout << textureFace[0] << " " << textureFace[1] << " " << textureFace[2] << std::endl;
     for (int j = 0; j < 3; j++) {
       Vec3<float> v0 = m->getVertex(face[j]);
       int x = (v0.x) * width;
       int y = (v0.y) * height;
       worldVertices[j] = v0;
       screenVertices[j] = (Vec3<float>(x, y, v0.z));
+      Vec3<float> vt = m->getTextureVertex(textureFace[j]);
+      // std::cout << vt.x << " " << vt.y << " " << vt.z << std::endl;
+      textureVertices[j] = vt;
     }
     // Find the normal of the face, and find dot product between
     // the normal and the light direction. This will give us
@@ -204,8 +227,8 @@ int main(int argc, char **argv) {
     faceNormal = faceNormal.normalize();
     float n = faceNormal * light;
     if (n > 0) { // n < 0 on objects behind, so dont render
-      draw_triangle(screenVertices[0], screenVertices[1], screenVertices[2],
-                    image, n, zbuffer);
+      draw_triangle(screenVertices[0], screenVertices[1], screenVertices[2], textureVertices[0], textureVertices[1], textureVertices[2],
+                    image, &(m->diffuse_map), n, zbuffer);
     }
   }
   image.flip_vertically();

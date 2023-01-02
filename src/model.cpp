@@ -61,6 +61,7 @@ void Model::loadTexture(const char *fileName, const char *suffix,
   std::cout << file << " texture: "
             << (ptr->read_tga_file(file.c_str()) ? "succeeded" : "failed")
             << std::endl;
+  ptr->flip_vertically();
 }
 
 int Model::numFaces() { return faces.size(); }
@@ -75,6 +76,10 @@ Vec3<float> Model::getVertex(int i) {
   float newY = (vertex.y - minVal) / (maxVal - minVal);
   float newZ = (vertex.z - minVal) / (maxVal - minVal);
   return Vec3<float>(newX, newY, newZ);
+}
+
+Vec3<float> Model::getTextureVertex(int i) {
+  return texture_coords[i];
 }
 
 std::vector<int> Model::getFace(int i) { return faces[i]; }
